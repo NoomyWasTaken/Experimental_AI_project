@@ -1,6 +1,7 @@
 import collections
 import queue
 from wav2vec2_inference import Wave2Vec2Inference
+from wav2vec2_inference_ser import Wave2Vec2InferenceSER
 import numpy as np
 import pyaudio
 import webrtcvad
@@ -121,12 +122,15 @@ class VADAudio(Audio):
 
 
 def main(ARGS):
-    model_name = "oliverguhr/wav2vec2-large-xlsr-53-german-cv9"
+    model_name = "jonatasgrosman/wav2vec2-large-english"
 
     wave_buffer = BehaviorSubject(np.array([]))
     wave2vec_asr = Wave2Vec2Inference(model_name)
+    wave2vec_ser = Wave2Vec2InferenceSER(model_name)
     wave_buffer.subscribe(
         on_next=lambda x: asr_output_formatter(wave2vec_asr, x))
+    wave_buffer.subscribe(
+        on_next=lambda x: ser_output_formatter(wave2vec_ser, x))
 
     # Start audio with VAD
     vad_audio = VADAudio(aggressiveness=ARGS.webRTC_aggressiveness,
@@ -183,6 +187,13 @@ def asr_output_formatter(asr, audio):
     inference_time = time.perf_counter()-start
     sample_length = len(audio) / DEFAULT_SAMPLE_RATE
     print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")    
+
+def ser_output_formatter(ser, audio):
+    start = time.perf_counter()
+    text = ser.buffer_to_text(audio)
+    inference_time = time.perf_counter()-start
+    sample_length = len(audio) / DEFAULT_SAMPLE_RATE
+    print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")
 
 def Int2FloatSimple(sound):
     return torch.from_numpy(np.frombuffer(sound, dtype=np.int16).astype('float32') / 32767)

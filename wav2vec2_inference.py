@@ -1,9 +1,7 @@
-import soundfile as sf
-import torch
+import torch, librosa
 from transformers import AutoModelForCTC, AutoProcessor, Wav2Vec2Processor
 
 # Improvements: 
-# - convert non 16 khz sample rates
 # - inference time log
 
 class Wave2Vec2Inference:
@@ -56,12 +54,12 @@ class Wave2Vec2Inference:
         return total_average
 
     def file_to_text(self, filename):
-        audio_input, samplerate = sf.read(filename)
+        audio_input, samplerate = librosa.load(filename, sr=16000)
         assert samplerate == 16000
         return self.buffer_to_text(audio_input)
     
 if __name__ == "__main__":
     print("Model test")
-    asr = Wave2Vec2Inference("oliverguhr/wav2vec2-large-xlsr-53-german-cv9")
-    text = asr.file_to_text("test.wav")
+    asr = Wave2Vec2Inference("jonatasgrosman/wav2vec2-large-english")
+    text = asr.file_to_text("../Audio_Speech_Actors_01-24/03-01-08-02-01-01-01.wav")
     print(text)
