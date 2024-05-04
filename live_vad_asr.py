@@ -1,7 +1,7 @@
 import collections
 import queue
-from wav2vec2_inference import Wave2Vec2Inference
-from wav2vec2_inference_ser import Wave2Vec2InferenceSER
+from whisper_distil_large_v2 import WhisperInference
+from WavLM_lg_ser import WavLMInferenceSER
 import numpy as np
 import pyaudio
 import webrtcvad
@@ -125,8 +125,8 @@ def main(ARGS):
     model_name = "jonatasgrosman/wav2vec2-large-english"
 
     wave_buffer = BehaviorSubject(np.array([]))
-    wave2vec_asr = Wave2Vec2Inference(model_name)
-    wave2vec_ser = Wave2Vec2InferenceSER(model_name)
+    wave2vec_asr = WhisperInference(model_name)
+    wave2vec_ser = WavLMInferenceSER(model_name)
     wave_buffer.subscribe(
         on_next=lambda x: asr_output_formatter(wave2vec_asr, x))
     wave_buffer.subscribe(
