@@ -4,7 +4,7 @@ from transformers import AutoModelForCTC, AutoProcessor, Wav2Vec2Processor
 # Improvements: 
 # - inference time log
 
-class Wave2Vec2Inference:
+class Wav2Vec2Inference:
     def __init__(self,model_name, hotwords=[], use_lm_if_possible=True, use_gpu=True):
         self.device = "cuda" if use_gpu and torch.cuda.is_available() else "cpu"
         if use_lm_if_possible:            
@@ -60,6 +60,6 @@ class Wave2Vec2Inference:
     
 if __name__ == "__main__":
     print("Model test")
-    asr = Wave2Vec2Inference("jonatasgrosman/wav2vec2-large-english")
-    text = asr.file_to_text("../Audio_Speech_Actors_01-24/03-01-08-02-01-01-01.wav")
+    asr = Wav2Vec2Inference("jonatasgrosman/wav2vec2-large-english")
+    text = asr.file_to_text("C:/temp/Audio_Speech_Actors_01-24/03-01-05-02-01-02-08.wav")
     print(text)

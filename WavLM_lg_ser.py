@@ -38,3 +38,13 @@ if __name__ == "__main__":
     asr = WavLMInferenceSER("")
     interp = asr.file_to_text("C:/temp/Audio_Speech_Actors_01-24/03-01-05-02-01-02-08.wav")
     print(interp)
+
+    from dummy_test import DummyTest
+    dummy = DummyTest(asr)
+    print(dummy.test("ravdess"))
+    print(dummy.test("icmocap"))
+
+# Correct: 286 Total: 672 Accuracy: 42.560%
+# label vs prediction {'neu': Counter({'fru': 61, 'ang': 30, 'sad': 3, 'neu': 2}), 'ang': Counter({'ang': 190, 'fru': 2}), 'sad': Counter({'ang': 72, 'fru': 69, 'exc': 24, 'sad': 19, 'neu': 4, 'hap': 4}), 'hap': Counter({'ang': 154, 'fru': 27, 'exc': 10, 'hap': 1})}
+# Correct: 2458 Total: 4490 Accuracy: 54.744%
+# label vs prediction {'neu': Counter({'neu': 1134, 'fru': 261, 'sad': 250, 'exc': 43, 'ang': 13, 'hap': 7}), 'ang': Counter({'ang': 927, 'fru': 130, 'exc': 28, 'neu': 9, 'sad': 8, 'hap': 1}), 'sad': Counter({'sad': 981, 'fru': 51, 'neu': 31, 'hap': 9, 'exc': 8, 'ang': 4}), 'hap': Counter({'exc': 191, 'sad': 153, 'hap': 120, 'neu': 105, 'fru': 19, 'ang': 7})}
