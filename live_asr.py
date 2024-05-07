@@ -2,6 +2,7 @@ import pyaudio
 import webrtcvad
 from wav2vec2_inference import Wave2Vec2Inference
 from wav2vec2_inference_ser import Wave2Vec2InferenceSER
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import numpy as np
 import threading
 import time
@@ -74,6 +75,13 @@ class LiveWav2Vec2:
         audio.terminate()
 
     @staticmethod
+    def sentiment_analysis(text):
+        analyzer = SentimentIntensityAnalyzer()
+        sentiment_score = analyzer.polarity_scores(text)['compound']
+        sentiment_label = "positive" if sentiment_score >= 0 else "negative"
+        return sentiment_label, sentiment_score
+
+    @staticmethod
     def asr_process(model_name, in_queue, output_queue):
         wave2vec_asr = Wave2Vec2Inference(model_name, use_lm_if_possible=True)
         wave2vec_esr = Wave2Vec2InferenceSER(model_name, use_lm_if_possible=True)
@@ -92,8 +100,11 @@ class LiveWav2Vec2:
             text = text.lower()
             inference_time = time.perf_counter()-start
             sample_length = len(float64_buffer) / 16000  # length in sec
+
+            sentiment_label, sentiment_score = LiveWav2Vec2.sentiment_analysis(text)
+
             if text != "" and len(text) > 1:
-                output_queue.put([text,interp,sample_length,inference_time,confidence])
+                output_queue.put([text,interp,sample_length,inference_time,confidence,sentiment_label,sentiment_score])
     
 
     @staticmethod
@@ -128,8 +139,8 @@ if __name__ == "__main__":
 
     try:
         while True:
-            text, interp, sample_length, inference_time, confidence = asr.get_last_text()
-            print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{confidence}\t{text}\t{interp}")
+            text, interp, sample_length, inference_time, confidence, sentiment_label, sentiment_score = asr.get_last_text()
+            print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{confidence}\t{text}\t{interp}\t{sentiment_label}\t{sentiment_score}")
 
     except KeyboardInterrupt:
         asr.stop()

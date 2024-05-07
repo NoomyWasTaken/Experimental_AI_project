@@ -122,7 +122,8 @@ class VADAudio(Audio):
 
 
 def main(ARGS):
-    model_name = "jonatasgrosman/wav2vec2-large-english"
+    # model_name = "jonatasgrosman/wav2vec2-large-english"
+    model_name = "facebook/wav2vec2-base-100h"
 
     wave_buffer = BehaviorSubject(np.array([]))
     wave2vec_asr = WhisperInference(model_name)

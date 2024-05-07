@@ -15,7 +15,7 @@ class Wave2Vec2InferenceSER:
         self.model.projector = nn.Linear(1024, 1024, bias=True)
         self.model.classifier = nn.Linear(1024, 8, bias=True)
 
-        torch_state_dict = torch.load('pytorch_model.bin')
+        torch_state_dict = torch.load('pytorch_model.bin', map_location="cpu")
 
         self.model.projector.weight.data = torch_state_dict['classifier.dense.weight']
         self.model.projector.bias.data = torch_state_dict['classifier.dense.bias']
