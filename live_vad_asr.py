@@ -12,6 +12,11 @@ from rx.subject import BehaviorSubject
 import time
 from sys import exit
 
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
+DEFAULT_SAMPLE_RATE = 16000
+
 class Audio(object):
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
 
@@ -79,7 +84,7 @@ class VADAudio(Audio):
         """Generator that yields all audio frames from microphone."""
         if self.input_rate == self.RATE_PROCESS:
             while True:
-                yield self.read()
+                    yield self.read()
         else:
             raise Exception("Resampling required")
 
@@ -120,17 +125,16 @@ class VADAudio(Audio):
                     yield None
                     ring_buffer.clear()
 
-
-def main(ARGS):
+def main(ARGS,stop_event,queue):
     model_name = "jonatasgrosman/wav2vec2-large-english"
 
     wave_buffer = BehaviorSubject(np.array([]))
     wave2vec_asr = WhisperInference(model_name)
     wave2vec_ser = WavLMInferenceSER(model_name)
     wave_buffer.subscribe(
-        on_next=lambda x: asr_output_formatter(wave2vec_asr, x))
+        on_next=lambda x: asr_output_formatter(wave2vec_asr, x, queue))
     wave_buffer.subscribe(
-        on_next=lambda x: ser_output_formatter(wave2vec_ser, x))
+        on_next=lambda x: ser_output_formatter(wave2vec_ser, x, queue))
 
     # Start audio with VAD
     vad_audio = VADAudio(aggressiveness=ARGS.webRTC_aggressiveness,
@@ -157,6 +161,8 @@ def main(ARGS):
     wav_data = bytearray()
     try:
         for frame in frames:
+            if stop_event.is_set(): # if receive stop event, exit
+                exit()
             if frame is not None:
                 if spinner:
                     spinner.start()
@@ -176,24 +182,28 @@ def main(ARGS):
                     wave_buffer.on_next(audio_float32.numpy())
                 else:
                     print("VAD detected noise")
+                    queue.put("VAD detected noise")
                 wav_data = bytearray()
     except KeyboardInterrupt:        
         exit()
 
-
-def asr_output_formatter(asr, audio):
+def asr_output_formatter(asr, audio, queue):
     start = time.perf_counter()
     text = asr.buffer_to_text(audio)
     inference_time = time.perf_counter()-start
     sample_length = len(audio) / DEFAULT_SAMPLE_RATE
-    print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")    
+    print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")
+    message = f"text: {text}"
+    queue.put(message)
 
-def ser_output_formatter(ser, audio):
+def ser_output_formatter(ser, audio, queue):
     start = time.perf_counter()
     text = ser.buffer_to_text(audio)
     inference_time = time.perf_counter()-start
     sample_length = len(audio) / DEFAULT_SAMPLE_RATE
     print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")
+    message = f"emotion: {text}"
+    queue.put(message)
 
 def Int2FloatSimple(sound):
     return torch.from_numpy(np.frombuffer(sound, dtype=np.int16).astype('float32') / 32767)
@@ -210,7 +220,6 @@ def Int2Float(sound):
 
 
 if __name__ == '__main__':
-    DEFAULT_SAMPLE_RATE = 16000
 
     import argparse
     parser = argparse.ArgumentParser(
