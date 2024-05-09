@@ -9,9 +9,11 @@ from halo import Halo
 import torch
 import torchaudio
 from rx.subject import BehaviorSubject
+import rx
 import time
 from sys import exit
-
+import streamlit as st
+st.set_page_config(page_title='DEMO')
 class Audio(object):
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
 
@@ -125,12 +127,17 @@ def main(ARGS):
     model_name = "jonatasgrosman/wav2vec2-large-english"
 
     wave_buffer = BehaviorSubject(np.array([]))
+    asr_buffer = BehaviorSubject(str())
+    ser_buffer = BehaviorSubject(str())
     wave2vec_asr = WhisperInference(model_name)
     wave2vec_ser = WavLMInferenceSER(model_name)
     wave_buffer.subscribe(
-        on_next=lambda x: asr_output_formatter(wave2vec_asr, x))
+        on_next=lambda x: asr_output_formatter(wave2vec_asr, x, asr_buffer))
     wave_buffer.subscribe(
-        on_next=lambda x: ser_output_formatter(wave2vec_ser, x))
+        on_next=lambda x: ser_output_formatter(wave2vec_ser, x, ser_buffer))
+    asr_ser_buffer = rx.zip(asr_buffer, ser_buffer)
+    asr_ser_buffer.subscribe(
+        on_next=lambda x: st.write(x[0], x[1]))
 
     # Start audio with VAD
     vad_audio = VADAudio(aggressiveness=ARGS.webRTC_aggressiveness,
@@ -181,19 +188,35 @@ def main(ARGS):
         exit()
 
 
-def asr_output_formatter(asr, audio):
-    start = time.perf_counter()
-    text = asr.buffer_to_text(audio)
-    inference_time = time.perf_counter()-start
-    sample_length = len(audio) / DEFAULT_SAMPLE_RATE
-    print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")    
+def asr_output_formatter(asr, audio, asr_buffer):
+    with st.spinner('Transcribing...'):
+        start = time.perf_counter()
+        text = asr.buffer_to_text(audio)
+        inference_time = time.perf_counter()-start
+        sample_length = len(audio) / DEFAULT_SAMPLE_RATE
+        print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")    
+        if len(text) > 0:
+            asr_buffer.on_next(text[0])
 
-def ser_output_formatter(ser, audio):
+def ser_output_formatter(ser, audio, ser_buffer):
     start = time.perf_counter()
     text = ser.buffer_to_text(audio)
     inference_time = time.perf_counter()-start
     sample_length = len(audio) / DEFAULT_SAMPLE_RATE
     print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")
+    label2id = {
+        "ang": ":angry:",
+        "sad": ":cry:",
+        "hap": ":smile:",
+        "sur": ":astonished:",
+        "fea": ":fearful:",
+        "dis": ":nauseated_face:",
+        "con": ":face_with_rolling_eyes:",
+        "neu": ":neutral_face:",
+        "fru": ":tired_face:"
+    }
+    if len(text) > 0 and text[0][:3].lower() in label2id:
+        ser_buffer.on_next(label2id[text[0][:3].lower()])
 
 def Int2FloatSimple(sound):
     return torch.from_numpy(np.frombuffer(sound, dtype=np.int16).astype('float32') / 32767)
