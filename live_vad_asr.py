@@ -2,6 +2,7 @@ import collections
 import queue
 from whisper_distil_large_v2 import WhisperInference
 from WavLM_lg_ser import WavLMInferenceSER
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import numpy as np
 import pyaudio
 import webrtcvad
@@ -56,6 +57,7 @@ class Audio(object):
 
         self.stream = self.pa.open(**kwargs)
         self.stream.start_stream()
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
 
     def read(self):
         """Return a block of audio data, blocking if necessary."""
@@ -68,6 +70,17 @@ class Audio(object):
 
     frame_duration_ms = property(
         lambda self: 1000 * self.block_size // self.sample_rate)
+    
+    @staticmethod
+    def sentiment_analysis(text):
+        analyzer = SentimentIntensityAnalyzer()
+        sentiment_score = analyzer.polarity_scores(text)['compound']
+        sentiment_label = "neutral"
+        if sentiment_score > 0:
+            sentiment_label = "positive"
+        elif sentiment_score < 0:
+            sentiment_label = "negative"
+        return sentiment_label, sentiment_score
 
 
 class VADAudio(Audio):
@@ -197,6 +210,8 @@ def asr_output_formatter(asr, audio, asr_buffer):
         print(f"{sample_length:.3f}s\t{inference_time:.3f}s\t{text}")    
         if len(text) > 0:
             asr_buffer.on_next(text[0])
+            sentiment_label, sentiment_score = Audio.sentiment_analysis(text[0])
+            print(f"Sentiment: {sentiment_label}, Score: {sentiment_score}")
 
 def ser_output_formatter(ser, audio, ser_buffer):
     start = time.perf_counter()
