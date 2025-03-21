@@ -75,7 +75,11 @@ class Audio(object):
     def sentiment_analysis(text):
         analyzer = SentimentIntensityAnalyzer()
         sentiment_score = analyzer.polarity_scores(text)['compound']
-        sentiment_label = "positive" if sentiment_score >= 0 else "negative"
+        sentiment_label = "neutral"
+        if sentiment_score > 0:
+            sentiment_label = "positive"
+        elif sentiment_score < 0:
+            sentiment_label = "negative"
         return sentiment_label, sentiment_score
 
 
